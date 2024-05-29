@@ -3,6 +3,8 @@
 }
 .stfe--root {
 	--stfe--thumb-size: 10;
+	--stfe--name-size: 1em;
+
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
@@ -89,4 +91,30 @@
 	-webkit-line-clamp: 4;
 	text-overflow: ellipsis;
 	overflow: hidden;
+	font-size: var(--stfe--name-size);
+}
+
+
+.stfe--small {
+	.stfe--body {
+		grid-template-columns: repeat(
+			auto-fill,
+			minmax(calc(var(--stfe--thumb-size) * 5rem), 1fr)
+		);
+	}
+	.stfe--item {
+		display: flex;
+		gap: 0.5em;
+		align-items: center;
+	}
+	.stfe--thumb {
+		width: 20%;
+	}
+
+	@container stfe--item (min-width: 0) {
+		.stfe--icon {
+			width: 20%;
+			font-size: calc(90cqw / 5);
+		}
+	}
 }

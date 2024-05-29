@@ -182,10 +182,25 @@ export class FileExplorer {
                     size.min = '3';
                     size.max = '20';
                     size.step = '1';
-                    size.value = '10';
+                    size.value = localStorage.getItem('stfe--thumb-size') ?? '10';
                     size.addEventListener('input', ()=>{
                         this.dom.root.style.setProperty('--stfe--thumb-size', size.value);
+                        const num = Number(size.value);
+                        if (num >= 9) {
+                            this.dom.root.style.setProperty('--stfe--name-size', '1em');
+                        } else if (num < 9 && num >= 7) {
+                            this.dom.root.style.setProperty('--stfe--name-size', 'small');
+                        } else if (num < 7) {
+                            this.dom.root.style.setProperty('--stfe--name-size', 'smaller');
+                        }
+                        if (num == 3) {
+                            this.dom.root.classList.add('stfe--small');
+                        } else {
+                            this.dom.root.classList.remove('stfe--small');
+                        }
+                        localStorage.setItem('stfe--thumb-size', size.value);
                     });
+                    size.dispatchEvent(new Event('input', { bubbles:true }));
                     head.append(size);
                 }
                 root.append(head);
