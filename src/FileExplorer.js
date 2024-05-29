@@ -1,6 +1,7 @@
 import { getRequestHeaders } from '../../../../../script.js';
-import { POPUP_TYPE, Popup } from '../../../../popup.js';
+import { POPUP_RESULT, POPUP_TYPE, Popup } from '../../../../popup.js';
 import { humanFileSize } from '../../../../utils.js';
+import { waitForFrame } from '../lib/wait.js';
 import { FileItem } from './FileItem.js';
 
 export class FileExplorer {
@@ -280,6 +281,83 @@ export class FileExplorer {
                         } else {
                             this.#selection.splice(this.#selection.indexOf(file.path));
                         }
+                    }
+                });
+                item.addEventListener('contextmenu', async(evt)=>{
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                    let menu;
+                    const blocker = document.createElement('div'); {
+                        blocker.classList.add('stfe--ctx-blocker');
+                        blocker.addEventListener('click', ()=>{
+                            blocker.remove();
+                        });
+                        menu = document.createElement('menu'); {
+                            menu.classList.add('stfe--ctx-menu');
+                            const rename = document.createElement('li'); {
+                                rename.classList.add('stfe--ctx-item');
+                                rename.textContent = 'Rename...';
+                                rename.addEventListener('click', async(evt)=>{
+                                    blocker.remove();
+                                    const dlg = new Popup('⚠️ Renaming files can break stuff.', POPUP_TYPE.INPUT, file.path);
+                                    await dlg.show();
+                                    if (dlg.result == POPUP_RESULT.AFFIRMATIVE) {
+                                        const response = await fetch('/api/plugins/files/rename', {
+                                            method: 'POST',
+                                            headers: getRequestHeaders(),
+                                            body: JSON.stringify({
+                                                path: [this.pathString, file.path].join('/'),
+                                                newName: dlg.value,
+                                            }),
+                                        });
+                                        if (!response.ok) {
+                                            alert('Something went wrong');
+                                            return;
+                                        }
+                                        await this.loadDir();
+                                    }
+                                });
+                                menu.append(rename);
+                            }
+                            const del = document.createElement('li'); {
+                                del.classList.add('stfe--ctx-item');
+                                del.textContent = 'Delete...';
+                                del.addEventListener('click', async(evt)=>{
+                                    blocker.remove();
+                                    const dlg = new Popup(`⚠️ Deleting files can break stuff.<br>Are you sure you want to delete <code>${file.path}</code>?`, POPUP_TYPE.CONFIRM);
+                                    await dlg.show();
+                                    if (dlg.result == POPUP_RESULT.AFFIRMATIVE) {
+                                        const response = await fetch('/api/plugins/files/delete', {
+                                            method: 'POST',
+                                            headers: getRequestHeaders(),
+                                            body: JSON.stringify({
+                                                path: [this.pathString, file.path].join('/'),
+                                            }),
+                                        });
+                                        if (!response.ok) {
+                                            alert('Something went wrong');
+                                            return;
+                                        }
+                                        await this.loadDir();
+                                    }
+                                });
+                                menu.append(del);
+                            }
+                            blocker.append(menu);
+                        }
+                        document.body.append(blocker);
+                    }
+                    await waitForFrame();
+                    const rect = menu.getBoundingClientRect();
+                    if (evt.clientX + rect.width < window.innerWidth) {
+                        menu.style.left = `${evt.clientX}px`;
+                    } else {
+                        menu.style.right = `${evt.clientX}px`;
+                    }
+                    if (evt.clientY + rect.height < window.innerHeight) {
+                        menu.style.top = `${evt.clientY}px`;
+                    } else {
+                        menu.style.bottom = `${evt.clientY}px`;
                     }
                 });
                 if (file.fileType == 'image') {

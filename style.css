@@ -118,3 +118,41 @@
 		}
 	}
 }
+
+
+
+.stfe--ctx-blocker {
+	position: fixed;
+	inset: 0;
+	z-index: 40000;
+}
+.stfe--ctx-menu {
+	position: fixed;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	background-color: transparent;
+
+	display: flex;
+    background-color: var(--SmartThemeBlurTintColor);
+    -webkit-backdrop-filter: blur(var(--SmartThemeBlurStrength));
+    backdrop-filter: blur(var(--SmartThemeBlurStrength));
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    flex-flow: column;
+    border-radius: 10px;
+}
+.stfe--ctx-item {
+	color: var(--SmartThemeBodyColor);
+    padding: 5px 5px;
+    padding-bottom: 5px;
+    text-decoration: none;
+    display: flex;
+    column-gap: 10px;
+    cursor: pointer;
+    align-items: baseline;
+	opacity: 0.5;
+	transition: 200ms;
+	&:hover {
+		opacity: 1;
+	}
+}
