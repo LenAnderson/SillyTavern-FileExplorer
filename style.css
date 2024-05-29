@@ -1,0 +1,92 @@
+.shadow_popup > .dialogue_popup:has(.stfe--root) {
+	aspect-ratio: unset;
+}
+.stfe--root {
+	--stfe--thumb-size: 10;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	text-align: left;
+	height: 100%;
+}
+
+.stfe--head {
+	flex: 0 0 auto;
+	display: flex;
+	gap: 0.5em;
+	align-items: baseline;
+	.stfe--actions {
+		flex: 0 0 auto;
+		display: flex;
+		gap: 0.5em;
+		align-items: baseline;
+		.stfe--action {
+			aspect-ratio: 1 / 1;
+		}
+	}
+	.stfe--crumbs {
+		flex: 1 1 auto;
+	}
+	.stfe--size {
+		flex: 0 0 auto;
+		width: 15rem;
+	}
+}
+
+.stfe--body {
+	flex: 0 1 auto;
+	overflow: auto;
+
+	display: grid;
+	grid-template-columns: repeat(
+		auto-fill,
+		minmax(calc(var(--stfe--thumb-size) * 1rem), 1fr)
+	);
+	gap: 0.5em;
+}
+
+.stfe--item {
+	text-align: center;
+	width: 100%;
+	background-color: var(--SmartThemeBotMesBlurTintColor);
+	cursor: pointer;
+	border: 1px solid var(--SmartThemeBorderColor);
+	transition: 200ms;
+	padding: 0.25em;
+	container-type: inline-size;
+	container-name: stfe--item;
+	&:hover {
+		border-color: var(--SmartThemeQuoteColor);
+		.stfe--icon, .stfe--name {
+			opacity: 1;
+		}
+	}
+}
+
+.stfe--thumb {
+	width: 100%;
+	aspect-ratio: 1 / 1;
+	object-fit: contain;
+	object-position: center;
+}
+
+@container stfe--item (min-width: 0) {
+	.stfe--icon {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		font-size: 90cqw;
+		opacity: 0.5;
+		transition: 200ms;
+	}
+}
+
+.stfe--name {
+	word-wrap: break-word;
+	opacity: 0.5;
+	transition: 200ms;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 4;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
