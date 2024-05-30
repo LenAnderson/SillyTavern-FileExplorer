@@ -170,6 +170,28 @@ export class FileExplorer {
                     }
                     head.append(actions);
                 }
+                const reveal = document.createElement('div'); {
+                    reveal.classList.add('stfe--action');
+                    reveal.classList.add('stfe--reveal');
+                    reveal.classList.add('menu_button');
+                    reveal.classList.add('fa-solid');
+                    reveal.classList.add('fa-folder-open');
+                    reveal.title = 'Reveal in OS File Explorer';
+                    reveal.addEventListener('click', async()=>{
+                        const response = await fetch('/api/plugins/files/reveal', {
+                            method: 'POST',
+                            headers: getRequestHeaders(),
+                            body: JSON.stringify({
+                                path: this.pathString,
+                            }),
+                        });
+                        if (!response.ok) {
+                            alert('Something went wrong');
+                            return;
+                        }
+                    });
+                    actions.append(reveal);
+                }
                 const crumbs = document.createElement('div'); {
                     this.dom.crumbs = crumbs;
                     crumbs.classList.add('stfe--crumbs');
@@ -237,7 +259,7 @@ export class FileExplorer {
             method: 'POST',
             headers: getRequestHeaders(),
             body: JSON.stringify({
-                folder: this.pathString,
+                path: this.pathString,
                 extensions: this.extensionList,
                 types: this.typeList,
             }),
@@ -294,6 +316,95 @@ export class FileExplorer {
                         });
                         menu = document.createElement('menu'); {
                             menu.classList.add('stfe--ctx-menu');
+                            const view = document.createElement('li'); {
+                                view.classList.add('stfe--ctx-item');
+                                view.textContent = 'View';
+                                view.addEventListener('click', async(evt)=>{
+                                    blocker.remove();
+                                    const dom = document.createElement('div'); {
+                                        dom.classList.add('stfe--view');
+                                        switch (file.fileType) {
+                                            case 'text': {
+                                                const response = await fetch('/api/plugins/files/get', {
+                                                    method: 'POST',
+                                                    headers: getRequestHeaders(),
+                                                    body: JSON.stringify({
+                                                        path: [this.pathString, file.path].join('/'),
+                                                    }),
+                                                });
+                                                if (!response.ok) {
+                                                    alert('Something went wrong');
+                                                    return;
+                                                }
+                                                const txt = document.createElement('div'); {
+                                                    txt.classList.add('stfe--txt');
+                                                    txt.textContent = await response.text();
+                                                    dom.append(txt);
+                                                }
+                                                break;
+                                            }
+                                            case 'image': {
+                                                const img = document.createElement('img'); {
+                                                    img.classList.add('stfe--img');
+                                                    img.src = [this.pathUrl, file.path].join('/');
+                                                    dom.append(img);
+                                                    break;
+                                                }
+                                            }
+                                            case 'video': {
+                                                const vid = document.createElement('video'); {
+                                                    vid.classList.add('stfe--vid');
+                                                    vid.controls = true;
+                                                    vid.autoplay = true;
+                                                    vid.src = [this.pathUrl, file.path].join('/');
+                                                    dom.append(vid);
+                                                    break;
+                                                }
+                                            }
+                                            case 'application': {
+                                                switch (file.fileTypeFull) {
+                                                    case 'application/json': {
+                                                        const response = await fetch('/api/plugins/files/get', {
+                                                            method: 'POST',
+                                                            headers: getRequestHeaders(),
+                                                            body: JSON.stringify({
+                                                                path: [this.pathString, file.path].join('/'),
+                                                            }),
+                                                        });
+                                                        if (!response.ok) {
+                                                            alert('Something went wrong');
+                                                            return;
+                                                        }
+                                                        const txt = document.createElement('div'); {
+                                                            txt.classList.add('stfe--code');
+                                                            txt.textContent = JSON.stringify(JSON.parse(await response.text()), null, 2);
+                                                            dom.append(txt);
+                                                        }
+                                                        break;
+                                                    }
+                                                    default: {
+                                                        dom.textContent = 'Cannot do that.';
+                                                        break;
+                                                    }
+                                                }
+                                                break;
+                                            }
+                                            default: {
+                                                dom.textContent = 'Cannot do that.';
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    const dlg = new Popup(dom, POPUP_TYPE.TEXT, null, {
+                                        okButton: 'Close',
+                                        wide: false,
+                                        large: true,
+                                    });
+                                    dlg.dom.style.zIndex = window.getComputedStyle(this.popup.dom).getPropertyValue('z-index');
+                                    await dlg.show();
+                                });
+                                menu.append(view);
+                            }
                             const rename = document.createElement('li'); {
                                 rename.classList.add('stfe--ctx-item');
                                 rename.textContent = 'Rename...';
@@ -363,8 +474,23 @@ export class FileExplorer {
                 if (file.fileType == 'image') {
                     const img = document.createElement('img'); {
                         img.classList.add('stfe--thumb');
-                        img.src = [this.pathUrl, file.path].join('/');
+                        img.src = `/api/plugins/files/thumb?path=${encodeURIComponent([this.pathString, file.path].join('/'))}&w=100&h=100`;
                         item.append(img);
+                        const mo = new MutationObserver(muts=>{
+                            img.src = `/api/plugins/files/thumb?path=${encodeURIComponent([this.pathString, file.path].join('/'))}&w=${img.offsetWidth}&h=${img.offsetHeight}`;
+                        });
+                        mo.observe(this.dom.root, { attributes:true, attributeFilter:['style'] });
+                        const moRemove = new MutationObserver(muts=>{
+                            for (const mut of muts) {
+                                if ([...mut.removedNodes].find(node=>node == img || node.contains(img))) {
+                                    mo.disconnect();
+                                    moRemove.disconnect();
+                                    console.log('[STFE]', 'MO DISCONNECT', img);
+                                    return;
+                                }
+                            }
+                        });
+                        moRemove.observe(this.dom.root, { subtree:true, childList:true });
                     }
                 } else if (file.type == 'file') {
                     const icon = document.createElement('div'); {

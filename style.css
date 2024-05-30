@@ -156,3 +156,27 @@
 		opacity: 1;
 	}
 }
+
+.shadow_popup > .dialogue_popup:has(.stfe--view) {
+	aspect-ratio: unset;
+	width: fit-content;
+}
+.stfe--view {
+    display: flex;
+    height: 100%;
+
+	.stfe--img, .stfe--vid {
+		height: 100%;
+		width: 100%;
+		object-fit: contain;
+	}
+	.stfe--txt {
+		text-align: left;
+		white-space: pre-line;
+	}
+	.stfe--code {
+		text-align: left;
+		white-space: pre;
+		font-family: var(--monoFontFamily, monospace);
+	}
+}
