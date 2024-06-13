@@ -316,6 +316,28 @@ export class FileExplorer {
                         });
                         menu = document.createElement('menu'); {
                             menu.classList.add('stfe--ctx-menu');
+                            const open = document.createElement('li'); {
+                                open.classList.add('stfe--ctx-item');
+                                open.textContent = 'Open locally';
+                                open.addEventListener('click', async(evt)=>{
+                                    blocker.remove();
+                                    const dom = document.createElement('div'); {
+                                        dom.classList.add('stfe--open');
+                                        const response = await fetch('/api/plugins/files/open', {
+                                            method: 'POST',
+                                            headers: getRequestHeaders(),
+                                            body: JSON.stringify({
+                                                path: [this.pathString, file.path].join('/'),
+                                            }),
+                                        });
+                                        if (!response.ok) {
+                                            alert('Something went wrong');
+                                            return;
+                                        }
+                                    }
+                                });
+                                menu.append(open);
+                            }
                             const view = document.createElement('li'); {
                                 view.classList.add('stfe--ctx-item');
                                 view.textContent = 'View';
