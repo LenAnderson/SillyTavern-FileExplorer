@@ -1,4 +1,5 @@
-.shadow_popup > .dialogue_popup:has(.stfe--root) {
+.shadow_popup > .dialogue_popup:has(.stfe--root),
+body > .popup:has(.stfe--root) {
 	aspect-ratio: unset;
 }
 .stfe--root {
@@ -157,7 +158,8 @@
 	}
 }
 
-.shadow_popup > .dialogue_popup:has(.stfe--view) {
+.shadow_popup > .dialogue_popup:has(.stfe--view),
+body > .popup:has(.stfe--view) {
 	aspect-ratio: unset;
 	width: fit-content;
 }

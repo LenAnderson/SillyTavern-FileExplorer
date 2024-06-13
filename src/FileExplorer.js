@@ -398,9 +398,9 @@ export class FileExplorer {
                                     const dlg = new Popup(dom, POPUP_TYPE.TEXT, null, {
                                         okButton: 'Close',
                                         wide: false,
-                                        large: true,
+                                        large: false,
                                     });
-                                    dlg.dom.style.zIndex = window.getComputedStyle(this.popup.dom).getPropertyValue('z-index');
+                                    (dlg.dom ?? dlg.dlg).style.zIndex = window.getComputedStyle(this.popup.dom ?? this.popup.dlg).getPropertyValue('z-index');
                                     await dlg.show();
                                 });
                                 menu.append(view);
@@ -456,19 +456,22 @@ export class FileExplorer {
                             }
                             blocker.append(menu);
                         }
-                        document.body.append(blocker);
+                        this.dom.root.closest('dialog, body').append(blocker);
                     }
                     await waitForFrame();
                     const rect = menu.getBoundingClientRect();
-                    if (evt.clientX + rect.width < window.innerWidth) {
-                        menu.style.left = `${evt.clientX}px`;
+                    const layer = this.dom.root.closest('dialog, body').getBoundingClientRect();
+                    const x = evt.clientX - layer.left;
+                    const y = evt.clientY - layer.top;
+                    if (x + rect.width < window.innerWidth) {
+                        menu.style.left = `${x}px`;
                     } else {
-                        menu.style.right = `${evt.clientX}px`;
+                        menu.style.right = `${x}px`;
                     }
-                    if (evt.clientY + rect.height < window.innerHeight) {
-                        menu.style.top = `${evt.clientY}px`;
+                    if (y + rect.height < window.innerHeight) {
+                        menu.style.top = `${y}px`;
                     } else {
-                        menu.style.bottom = `${evt.clientY}px`;
+                        menu.style.bottom = `${y}px`;
                     }
                 });
                 if (file.fileType == 'image') {
