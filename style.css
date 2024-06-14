@@ -156,6 +156,9 @@ body > .popup:has(.stfe--root) {
 	&:hover {
 		opacity: 1;
 	}
+	&.stfe--ctx-default {
+		font-weight: bold;
+	}
 }
 
 .shadow_popup > .dialogue_popup:has(.stfe--view),

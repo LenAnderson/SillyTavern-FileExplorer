@@ -11,6 +11,7 @@ export class FileExplorer {
     /**@type {string[]} */ typeList;
 
     /**@type {boolean} */ isSingleSelect = true;
+    /**@type {boolean} */ isPicker = false;
 
     mappedList = [
         '~/assets',
@@ -57,8 +58,6 @@ export class FileExplorer {
 
     constructor(path = '~') {
         this.path = path.split(/[/\\]/);
-        this.buildDom();
-        this.pasteHandlerBound = this.pasteHandler.bind(this);
     }
 
     /**
@@ -235,7 +234,7 @@ export class FileExplorer {
             }
         }
         const dlg = new Popup(root, POPUP_TYPE.TEXT, null, {
-            okButton: 'Cancel',
+            okButton: this.isPicker ? 'Cancel' : 'Close',
             wide: true,
             large: true,
         });
@@ -244,6 +243,8 @@ export class FileExplorer {
 
 
     async show() {
+        this.buildDom();
+        this.pasteHandlerBound = this.pasteHandler.bind(this);
         this.loadDir();
         window.addEventListener('paste', this.pasteHandlerBound);
         await this.popup.show();
@@ -271,6 +272,7 @@ export class FileExplorer {
         this.dom.crumbs.textContent = this.pathString;
         const files = /**@type {FileItem[]} */(await response.json())
             .filter(f=>this.mappedList.includes([this.pathString, f.path].join('/')) || this.mappedList.find(it=>[this.pathString, f.path].join('/').startsWith(`${it}/`)))
+            .map(f=>(f.parentPath = this.pathString, f.parentUrl = this.pathUrl, Object.assign(new FileItem(), f)))
         ;
         files.sort((a,b)=>{
             if (a.type == 'dir' && b.type != 'dir') return -1;
@@ -287,22 +289,26 @@ export class FileExplorer {
                     file.type == 'file' ? new Date(file.modified).toLocaleString() : null,
                     file.type == 'file' ? humanFileSize(file.size) : null,
                 ].filter(it=>it).join('\n---\n');
-                item.addEventListener('click', ()=>{
+                item.addEventListener('click', async()=>{
                     if (file.type == 'dir') {
                         this.path.push(file.path);
                         this.loadDir();
                         return;
                     }
-                    if (this.isSingleSelect) {
-                        this.#selection = [file.path];
-                        this.popup.completeAffirmative();
-                    } else {
-                        const sel = item.classList.toggle('stfe--selected');
-                        if (sel) {
-                            this.#selection.push(file.path);
+                    if (this.isPicker) {
+                        if (this.isSingleSelect) {
+                            this.#selection = [file.path];
+                            this.popup.completeAffirmative();
                         } else {
-                            this.#selection.splice(this.#selection.indexOf(file.path));
+                            const sel = item.classList.toggle('stfe--selected');
+                            if (sel) {
+                                this.#selection.push(file.path);
+                            } else {
+                                this.#selection.splice(this.#selection.indexOf(file.path));
+                            }
                         }
+                    } else {
+                        await file.view();
                     }
                 });
                 item.addEventListener('contextmenu', async(evt)=>{
@@ -316,137 +322,33 @@ export class FileExplorer {
                         });
                         menu = document.createElement('menu'); {
                             menu.classList.add('stfe--ctx-menu');
+                            if (file.type == 'file') {
+                                const view = document.createElement('li'); {
+                                    view.classList.add('stfe--ctx-item');
+                                    if (!this.isPicker) view.classList.add('stfe--ctx-default');
+                                    view.textContent = 'View';
+                                    view.addEventListener('click', async(evt)=>{
+                                        blocker.remove();
+                                        await file.view();
+                                    });
+                                    menu.append(view);
+                                }
+                            }
                             const open = document.createElement('li'); {
                                 open.classList.add('stfe--ctx-item');
                                 open.textContent = 'Open locally';
                                 open.addEventListener('click', async(evt)=>{
                                     blocker.remove();
-                                    const dom = document.createElement('div'); {
-                                        dom.classList.add('stfe--open');
-                                        const response = await fetch('/api/plugins/files/open', {
-                                            method: 'POST',
-                                            headers: getRequestHeaders(),
-                                            body: JSON.stringify({
-                                                path: [this.pathString, file.path].join('/'),
-                                            }),
-                                        });
-                                        if (!response.ok) {
-                                            alert('Something went wrong');
-                                            return;
-                                        }
-                                    }
+                                    await file.open();
                                 });
                                 menu.append(open);
-                            }
-                            const view = document.createElement('li'); {
-                                view.classList.add('stfe--ctx-item');
-                                view.textContent = 'View';
-                                view.addEventListener('click', async(evt)=>{
-                                    blocker.remove();
-                                    const dom = document.createElement('div'); {
-                                        dom.classList.add('stfe--view');
-                                        switch (file.fileType) {
-                                            case 'text': {
-                                                const response = await fetch('/api/plugins/files/get', {
-                                                    method: 'POST',
-                                                    headers: getRequestHeaders(),
-                                                    body: JSON.stringify({
-                                                        path: [this.pathString, file.path].join('/'),
-                                                    }),
-                                                });
-                                                if (!response.ok) {
-                                                    alert('Something went wrong');
-                                                    return;
-                                                }
-                                                const txt = document.createElement('div'); {
-                                                    txt.classList.add('stfe--txt');
-                                                    txt.textContent = await response.text();
-                                                    dom.append(txt);
-                                                }
-                                                break;
-                                            }
-                                            case 'image': {
-                                                const img = document.createElement('img'); {
-                                                    img.classList.add('stfe--img');
-                                                    img.src = [this.pathUrl, file.path].join('/');
-                                                    dom.append(img);
-                                                    break;
-                                                }
-                                            }
-                                            case 'video': {
-                                                const vid = document.createElement('video'); {
-                                                    vid.classList.add('stfe--vid');
-                                                    vid.controls = true;
-                                                    vid.autoplay = true;
-                                                    vid.src = [this.pathUrl, file.path].join('/');
-                                                    dom.append(vid);
-                                                    break;
-                                                }
-                                            }
-                                            case 'application': {
-                                                switch (file.fileTypeFull) {
-                                                    case 'application/json': {
-                                                        const response = await fetch('/api/plugins/files/get', {
-                                                            method: 'POST',
-                                                            headers: getRequestHeaders(),
-                                                            body: JSON.stringify({
-                                                                path: [this.pathString, file.path].join('/'),
-                                                            }),
-                                                        });
-                                                        if (!response.ok) {
-                                                            alert('Something went wrong');
-                                                            return;
-                                                        }
-                                                        const txt = document.createElement('div'); {
-                                                            txt.classList.add('stfe--code');
-                                                            txt.textContent = JSON.stringify(JSON.parse(await response.text()), null, 2);
-                                                            dom.append(txt);
-                                                        }
-                                                        break;
-                                                    }
-                                                    default: {
-                                                        dom.textContent = 'Cannot do that.';
-                                                        break;
-                                                    }
-                                                }
-                                                break;
-                                            }
-                                            default: {
-                                                dom.textContent = 'Cannot do that.';
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    const dlg = new Popup(dom, POPUP_TYPE.TEXT, null, {
-                                        okButton: 'Close',
-                                        wide: false,
-                                        large: false,
-                                    });
-                                    (dlg.dom ?? dlg.dlg).style.zIndex = window.getComputedStyle(this.popup.dom ?? this.popup.dlg).getPropertyValue('z-index');
-                                    await dlg.show();
-                                });
-                                menu.append(view);
                             }
                             const rename = document.createElement('li'); {
                                 rename.classList.add('stfe--ctx-item');
                                 rename.textContent = 'Rename...';
                                 rename.addEventListener('click', async(evt)=>{
                                     blocker.remove();
-                                    const dlg = new Popup('⚠️ Renaming files can break stuff.', POPUP_TYPE.INPUT, file.path);
-                                    await dlg.show();
-                                    if (dlg.result == POPUP_RESULT.AFFIRMATIVE) {
-                                        const response = await fetch('/api/plugins/files/rename', {
-                                            method: 'POST',
-                                            headers: getRequestHeaders(),
-                                            body: JSON.stringify({
-                                                path: [this.pathString, file.path].join('/'),
-                                                newName: dlg.value,
-                                            }),
-                                        });
-                                        if (!response.ok) {
-                                            alert('Something went wrong');
-                                            return;
-                                        }
+                                    if (await file.rename()) {
                                         await this.loadDir();
                                     }
                                 });
@@ -457,20 +359,7 @@ export class FileExplorer {
                                 del.textContent = 'Delete...';
                                 del.addEventListener('click', async(evt)=>{
                                     blocker.remove();
-                                    const dlg = new Popup(`⚠️ Deleting files can break stuff.<br>Are you sure you want to delete <code>${file.path}</code>?`, POPUP_TYPE.CONFIRM);
-                                    await dlg.show();
-                                    if (dlg.result == POPUP_RESULT.AFFIRMATIVE) {
-                                        const response = await fetch('/api/plugins/files/delete', {
-                                            method: 'POST',
-                                            headers: getRequestHeaders(),
-                                            body: JSON.stringify({
-                                                path: [this.pathString, file.path].join('/'),
-                                            }),
-                                        });
-                                        if (!response.ok) {
-                                            alert('Something went wrong');
-                                            return;
-                                        }
+                                    if (await file.delete()) {
                                         await this.loadDir();
                                     }
                                 });
