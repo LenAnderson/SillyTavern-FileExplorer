@@ -76,7 +76,7 @@ export class FileExplorer {
                     method: 'POST',
                     headers: getRequestHeaders(),
                     body: JSON.stringify({
-                        path: `~/user/images/codex/${file.name}`,
+                        path: `${this.pathString}/${file.name}`,
                         file: dataUrl,
                     }),
                 });
@@ -149,7 +149,7 @@ export class FileExplorer {
                                                 method: 'POST',
                                                 headers: getRequestHeaders(),
                                                 body: JSON.stringify({
-                                                    path: `~/user/images/codex/${file.name}`,
+                                                    path: `${this.pathString}/${file.name}`,
                                                     file: dataUrl,
                                                 }),
                                             });
