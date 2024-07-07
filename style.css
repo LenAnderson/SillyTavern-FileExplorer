@@ -64,6 +64,9 @@ body > .popup:has(.stfe--root) {
 			opacity: 1;
 		}
 	}
+	&.stfe--selected {
+		border-color: var(--SmartThemeQuoteColor);
+	}
 }
 
 .stfe--thumb {
