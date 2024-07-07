@@ -12,6 +12,10 @@ export class FileExplorer {
 
     /**@type {boolean} */ isSingleSelect = true;
     /**@type {boolean} */ isPicker = false;
+    /**@type {boolean} */ isFixedRoot = false;
+    /**@type {boolean} */ isFixedPath = false;
+    /**@type {boolean} */ allowUnmapped = false;
+    /**@type {boolean} */ promptUpload = false;
 
     mappedList = [
         '~/assets',
@@ -31,6 +35,7 @@ export class FileExplorer {
     urlMap = {
     };
 
+    /**@type {string[]} */ root = ['~', 'user'];
     /**@type {string[]} */ path = ['~', 'user'];
     get pathString() { return this.path.join('/'); }
     get pathUrl() { return this.path.slice(1).join('/'); }
@@ -58,6 +63,7 @@ export class FileExplorer {
 
     constructor(path = '~') {
         this.path = path.split(/[/\\]/);
+        this.root = [...this.path];
     }
 
     /**
@@ -107,6 +113,7 @@ export class FileExplorer {
                         up.classList.add('fa-arrow-up');
                         up.title = 'Navigate to parent directory';
                         up.addEventListener('click', ()=>{
+                            if ((this.isFixedRoot || this.isFixedPath) && this.path.join('/') == this.root.join('/')) return;
                             if (this.path.length > 1) {
                                 this.path.pop();
                                 this.loadDir();
@@ -233,8 +240,9 @@ export class FileExplorer {
                 root.append(body);
             }
         }
-        const dlg = new Popup(root, POPUP_TYPE.TEXT, null, {
-            okButton: this.isPicker ? 'Cancel' : 'Close',
+        const dlg = new Popup(root, this.isPicker && !this.isSingleSelect ? POPUP_TYPE.CONFIRM : POPUP_TYPE.TEXT, null, {
+            okButton: this.isPicker ? (this.isSingleSelect ? 'Cancel' : 'OK') : 'Close',
+            cancelButton: this.isPicker && !this.isSingleSelect ? 'Cancel' : null,
             wide: true,
             large: true,
         });
@@ -271,7 +279,8 @@ export class FileExplorer {
         }
         this.dom.crumbs.textContent = this.pathString;
         const files = /**@type {FileItem[]} */(await response.json())
-            .filter(f=>this.mappedList.includes([this.pathString, f.path].join('/')) || this.mappedList.find(it=>[this.pathString, f.path].join('/').startsWith(`${it}/`)))
+            .filter(f=>!this.isFixedPath || f.type != 'dir')
+            .filter(f=>this.allowUnmapped || this.mappedList.includes([this.pathString, f.path].join('/')) || this.mappedList.find(it=>[this.pathString, f.path].join('/').startsWith(`${it}/`)))
             .map(f=>(f.parentPath = this.pathString, f.parentUrl = this.pathUrl, Object.assign(new FileItem(), f)))
         ;
         files.sort((a,b)=>{
@@ -279,6 +288,59 @@ export class FileExplorer {
             if (a.type != 'dir' && b.type == 'dir') return 1;
             return a.path.toLowerCase().localeCompare(b.path.toLowerCase());
         });
+        if (this.promptUpload) {
+            const item = document.createElement('div'); {
+                item.classList.add('stfe--item');
+                item.classList.add('stfe--uploadItem');
+                item.title = 'Upload files\n---\nOr paste (ctrl+v) to upload from clipboard';
+                item.addEventListener('click', async()=>{
+                    const inp = document.createElement('input'); {
+                        inp.type = 'file';
+                        inp.multiple = true;
+                        inp.addEventListener('change', async(evt)=>{
+                            if (inp.files.length > 0) {
+                                for (const file of inp.files) {
+                                    const reader = new FileReader();
+                                    const prom = new Promise(resolve=>reader.addEventListener('load', resolve));
+                                    reader.readAsDataURL(file);
+                                    await prom;
+                                    const dataUrl = reader.result;
+                                    const response = await fetch('/api/plugins/files/put', {
+                                        method: 'POST',
+                                        headers: getRequestHeaders(),
+                                        body: JSON.stringify({
+                                            path: `${this.pathString}/${file.name}`,
+                                            file: dataUrl,
+                                        }),
+                                    });
+                                    if (!response.ok) {
+                                        alert('something went wrong');
+                                        continue;
+                                    }
+                                }
+                                inp.value = null;
+                                this.loadDir();
+                            }
+                        });
+                        inp.click();
+                    }
+                });
+                {
+                    const icon = document.createElement('div'); {
+                        icon.classList.add('stfe--icon');
+                        icon.classList.add('fa-solid');
+                        icon.classList.add('fa-upload');
+                        item.append(icon);
+                    }
+                }
+                const name = document.createElement('div'); {
+                    name.classList.add('stfe--name');
+                    name.textContent = 'Upload files';
+                    item.append(name);
+                }
+                this.dom.body.append(item);
+            }
+        }
         for (const file of files) {
             const item = document.createElement('div'); {
                 item.classList.add('stfe--item');
