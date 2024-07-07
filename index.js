@@ -26,7 +26,7 @@ SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'explorer',
         }
         return '';
     },
-    returns: 'the selected file',
+    returns: 'the selected file if picker=true',
     namedArgumentList: [
         SlashCommandNamedArgument.fromProps({ name: 'types',
             description: 'list of types to includes, e.g. ["image", "image/jpeg", "text/plain"]',
@@ -35,6 +35,11 @@ SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'explorer',
         SlashCommandNamedArgument.fromProps({ name: 'ext',
             description: 'list of extensions to includes, e.g. ["jpg", "png", "pdf", "txt"]',
             typeList: [ARGUMENT_TYPE.LIST],
+        }),
+        SlashCommandNamedArgument.fromProps({ name: 'picker',
+            description: 'whether to act as a file picker (return selected file or files)',
+            typeList: [ARGUMENT_TYPE.BOOLEAN],
+            defaultValue: 'false',
         }),
     ],
     unnamedArgumentList: [
